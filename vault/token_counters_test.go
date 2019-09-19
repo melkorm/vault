@@ -8,37 +8,38 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func TestTokenStore_CountActiveTokens(t *testing.T) {
-	c, _, rootToken := TestCoreUnsealed(t)
+func testCountActiveTokens(t *testing.T, c *Core, root string, expectedServiceTokens int) {
 	rootCtx := namespace.RootContext(nil)
-
-	countTokens := func(totalServiceTokens int) {
-		resp, err := c.HandleRequest(rootCtx, &logical.Request{
-			ClientToken: rootToken,
-			Operation:   logical.ReadOperation,
-			Path:        "sys/internal/counters/tokens",
-		})
-		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
-		}
-
-		if diff := deep.Equal(resp.Data, map[string]interface{}{
-			"counters": &ActiveTokens{
-				ServiceTokens: TokenCounter{
-					Total: totalServiceTokens,
-				},
-			},
-		}); diff != nil {
-			t.Fatal(diff)
-		}
+	resp, err := c.HandleRequest(rootCtx, &logical.Request{
+		ClientToken: root,
+		Operation:   logical.ReadOperation,
+		Path:        "sys/internal/counters/tokens",
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
 	}
 
+	if diff := deep.Equal(resp.Data, map[string]interface{}{
+		"counters": &ActiveTokens{
+			ServiceTokens: TokenCounter{
+				Total: expectedServiceTokens,
+			},
+		},
+	}); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestTokenStore_CountActiveTokens(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	rootCtx := namespace.RootContext(nil)
+
 	// Count the root token
-	countTokens(1)
+	testCountActiveTokens(t, c, root, 1)
 
 	// Create some service tokens
 	req := &logical.Request{
-		ClientToken: rootToken,
+		ClientToken: root,
 		Operation:   logical.UpdateOperation,
 		Path:        "create",
 	}
@@ -50,7 +51,7 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 		}
 		tokens[i] = resp.Auth.ClientToken
 
-		countTokens(i + 2)
+		testCountActiveTokens(t, c, root, i+2)
 	}
 
 	// Revoke the service tokens
@@ -63,6 +64,6 @@ func TestTokenStore_CountActiveTokens(t *testing.T) {
 			t.Fatalf("bad: resp: %#v\n err: %v", resp, err)
 		}
 
-		countTokens(10 - i)
+		testCountActiveTokens(t, c, root, 10-i)
 	}
 }

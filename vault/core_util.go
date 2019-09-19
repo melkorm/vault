@@ -81,6 +81,8 @@ func loadMFAConfigs(context.Context, *Core) error { return nil }
 
 func shouldStartClusterListener(*Core) bool { return true }
 
+func hasNamespaces(*Core) bool { return false }
+
 func (c *Core) Features() license.Features {
 	return license.FeatureNone
 }
@@ -88,8 +90,6 @@ func (c *Core) Features() license.Features {
 func (c *Core) HasFeature(license.Features) bool {
 	return false
 }
-
-func hasNamespaces(*Core) bool { return false }
 
 func (c *Core) collectNamespaces() []*namespace.Namespace {
 	return []*namespace.Namespace{
