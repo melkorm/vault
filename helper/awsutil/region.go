@@ -2,11 +2,8 @@ package awsutil
 
 import (
 	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	hclog "github.com/hashicorp/go-hclog"
 )
@@ -55,21 +52,5 @@ func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 		return region
 	}
 
-	metadata := ec2metadata.New(sess, &aws.Config{
-		Endpoint:                          aws.String(ec2MetadataBaseURL + "/latest"),
-		EC2MetadataDisableTimeoutOverride: aws.Bool(true),
-		HTTPClient: &http.Client{
-			Timeout: time.Second,
-		},
-	})
-	if !metadata.Available() {
-		return DefaultRegion
-	}
-
-	region, err = metadata.Region()
-	if err != nil {
-		logger.Warn("unable to retrieve region from instance metadata, defaulting region to %s", DefaultRegion)
-		return DefaultRegion
-	}
-	return region
+	return DefaultRegion
 }
