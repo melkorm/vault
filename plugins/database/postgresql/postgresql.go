@@ -91,7 +91,9 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	statements = dbutil.StatementCompatibilityHelper(statements)
-
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	fmt.Println("new user")
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
@@ -114,13 +116,13 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 	if err != nil {
 		return "", "", err
 	}
-
+	fmt.Println("grab conn")
 	// Get the connection
 	db, err := p.getConnection(ctx)
 	if err != nil {
 		return "", "", err
 	}
-
+	fmt.Println("begin")
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -128,6 +130,7 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 
 	}
 	defer func() {
+		fmt.Println("rollback")
 		tx.Rollback()
 	}()
 	// Return the secret
@@ -145,17 +148,21 @@ func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Stateme
 				"password":   password,
 				"expiration": expirationStr,
 			}
+			fmt.Println("pre execute query", query, ctx)
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				fmt.Println("query err", err)
 				return "", "", err
 			}
 		}
 	}
 
 	// Commit the transaction
+	fmt.Println("pre commit")
 	if err := tx.Commit(); err != nil {
+		fmt.Println("commit err", err)
 		return "", "", err
 	}
-
+	fmt.Println("post commit")
 	return username, password, nil
 }
 

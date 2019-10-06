@@ -912,14 +912,21 @@ func (cn *conn) Exec(query string, args []driver.Value) (res driver.Result, err 
 }
 
 func (cn *conn) send(m *writeBuf) {
+	// fmt.Println("setting deadline")
+	// cn.c.SetDeadline(time.Now().Add(1 * time.Second))
 	_, err := cn.c.Write(m.wrap())
 	if err != nil {
+		fmt.Println("panic", err)
 		panic(err)
 	}
 }
 
 func (cn *conn) sendStartupPacket(m *writeBuf) error {
+	// cn.c.SetDeadline(time.Now().Add(1 * time.Second))
 	_, err := cn.c.Write((m.wrap())[1:])
+	if err != nil {
+		fmt.Println("err", err)
+	}
 	return err
 }
 
@@ -927,7 +934,11 @@ func (cn *conn) sendStartupPacket(m *writeBuf) error {
 // message should have no payload.  This method does not use the scratch
 // buffer.
 func (cn *conn) sendSimpleMessage(typ byte) (err error) {
+	// cn.c.SetDeadline(time.Now().Add(1 * time.Second))
 	_, err = cn.c.Write([]byte{typ, '\x00', '\x00', '\x00', '\x04'})
+	if err != nil {
+		fmt.Println("err", err)
+	}
 	return err
 }
 

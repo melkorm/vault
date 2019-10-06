@@ -101,9 +101,12 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 	// If we already have a DB, test it and return
 	if c.db != nil {
-		if err := c.db.PingContext(ctx); err == nil {
+		err := c.db.PingContext(ctx)
+		if err == nil {
+			fmt.Println("conn exists")
 			return c.db, nil
 		}
+		fmt.Println(err, "closing db")
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
 		c.db.Close()
